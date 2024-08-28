@@ -14,10 +14,13 @@
         <label for="mesInicio">¿Desde cuándo vas a empezar a ahorrar?</label><br>
         <select id="mesInicio" name="mesInicio" required></select><br><br>
 
-        <label for="fondoSeleccionado">Elige un fondo de inversión:</label><br>
+        <label for="fondoSeleccionado">Elige un fondo de inversión:<br>
+        <span style="font-size: 14px;">(Aquí tienes tres de nuestros productos disponibles en la app, clasificados en riesgo bajo, medio y alto.)</span>
+        </label><br>
         <select id="fondoSeleccionado" name="fondoSeleccionado" required></select><br><br>
         
-        <button type="button" onclick="calcularAhorro()">Calcular</button>
+        <button type="button" onclick="validarYCalcular()">Calcular</button>
+        <p id="error-mensaje" style="color:red; display:none;">Por favor, ingresa un valor.</p>
     </form>
 
     <div id="resultados"></div>
@@ -103,6 +106,18 @@
             input.value = valor;
         }
 
+        function validarYCalcular() {
+            const cantidad = document.getElementById("cantidad").value.trim();
+            const errorMensaje = document.getElementById("error-mensaje");
+
+            if (cantidad === "") {
+                errorMensaje.style.display = "block"; // Mostrar mensaje de error
+            } else {
+                errorMensaje.style.display = "none"; // Ocultar mensaje de error si se ingresa un valor
+                calcularAhorro(); // Llamar a la función si el campo no está vacío
+            }
+        }
+
         function calcularAhorro() {
             const cantidad = parseFloat(document.getElementById('cantidad').value.replace(/\./g, ''));
             const mesInicioValue = document.getElementById('mesInicio').value;
@@ -130,12 +145,12 @@
 
             const resultados = document.getElementById('resultados');
             resultados.innerHTML = `
-                <h2>Sin Inversión</h2>
+                <h2>Sin invertir en tyba</h2>
                 <table border="1">
                     <thead>
                         <tr>
-                            <th>Necesitas ahorrar al mes</th>
-                            <th>Total capital ahorrado</th>
+                            <th>Necesitas invertir al mes</th>
+                            <th>Total capital invertido</th>
                             <th>Total meses</th>
                         </tr>
                     </thead>
@@ -147,12 +162,12 @@
                         </tr>
                     </tbody>
                 </table>
-                <h2>Opción 1 invirtiendo los mismos ${formatoMoneda(ahorroMensual)} al mes</h2>
+                <h2>Opción 1 invirtiendo en tyba los mismos ${formatoMoneda(ahorroMensual)} al mes</h2>
                 <table border="1">
                     <thead>
                         <tr>
-                            <th>Necesitas ahorrar al mes</th>
-                            <th>Total capital ahorrado</th>
+                            <th>Necesitas invertir al mes</th>
+                            <th>Total capital invertido</th>
                             <th>Total meses</th>
                             <th>Capital más intereses</th>
                             <th>Interés anual</th>
@@ -168,12 +183,12 @@
                         </tr>
                     </tbody>
                 </table>
-                <h2>opción 2 inviertiendo menos al mes</h2>
+                <h2>Opción 2 inviertiendo en tyba una menor cantidad al mes</h2>
                 <table border="1">
                     <thead>
                         <tr>
-                            <th>Necesitas ahorrar al mes</th>
-                            <th>Total capital ahorrado</th>
+                            <th>Necesitas invertir al mes</th>
+                            <th>Total capital invertido</th>
                             <th>Total meses</th>
                             <th>Capital más intereses</th>
                             <th>Interés anual</th>
