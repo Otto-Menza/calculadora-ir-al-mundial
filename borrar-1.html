@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahorro para el Mundial</title>
+</head>
+<body>
+    <h1>Ahorro para el Mundial</h1>
+    <form id="ahorroForm">
+        <label for="cantidad">¿Cuánto necesitas para ir al mundial?</label><br>
+        <input type="text" id="cantidad" name="cantidad" required placeholder="Escriba un número" oninput="formatearNumero(this)"><br><br>
+        
+        <label for="mesInicio">¿Desde cuándo vas a empezar a ahorrar?</label><br>
+        <select id="mesInicio" name="mesInicio" required></select><br><br>
+
+        <label for="fondoSeleccionado">Elige un fondo de inversión:</label><br>
+        <select id="fondoSeleccionado" name="fondoSeleccionado" required></select><br><br>
+        
+        <button type="button" onclick="calcularAhorro()">Calcular</button>
+    </form>
+
+    <div id="resultados"></div>
+
+    <script>
+        async function obtenerFondos() {
+            try {
+                const response = await fetch('https://tyba.io/api-qa/robo-advisor/portfolios/sqi?product=STARK');
+                const data = await response.json();
+
+                const fondos = {};
+
+                // Filtrar y seleccionar el fondo con mayor expectedProfitability para cada nivel de riesgo
+                data.forEach(fondo => {
+                    const riskLevel = fondo.riskLevel.toLowerCase();
+                    if (!fondos[riskLevel] || fondo.expectedProfitability > fondos[riskLevel].expectedProfitability) {
+                        fondos[riskLevel] = fondo;
+                    }
+                });
+
+                const fondoSelect = document.getElementById('fondoSeleccionado');
+
+                ['bajo', 'medio', 'alto'].forEach(nivel => {
+                    if (fondos[nivel]) {
+                        const option = document.createElement('option');
+                        option.value = fondos[nivel].expectedProfitability;
+                        option.text = `${fondos[nivel].name} (Riesgo - ${fondos[nivel].riskLevel})`;
+                        fondoSelect.appendChild(option);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error al obtener los fondos de inversión:', error);
+            }
+        }
+
+        // Llamada para obtener los fondos cuando la página se carga
+        obtenerFondos();
+
+        // Llenar el select con las opciones de meses
+        const mesInicioSelect = document.getElementById('mesInicio');
+        const fechaActual = new Date();
+        const mesActual = fechaActual.getMonth();
+        const añoActual = fechaActual.getFullYear();
+        const mesFin = 4; // Mayo es el mes 4 (0-indexado)
+        const añoFin = 2026;
+
+        for (let año = añoActual; año <= añoFin; año++) {
+            let mesInicio = (año === añoActual) ? mesActual + 1 : 0;
+            let mesFinal = (año === añoFin) ? mesFin : 11;
+            for (let mes = mesInicio; mes <= mesFinal; mes++) {
+                let option = document.createElement('option');
+                let mesString = (mes + 1).toString().padStart(2, '0'); // Asegura que el mes tenga 2 dígitos
+                option.value = `${año}-${mesString}`;
+                option.text = new Date(año, mes).toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                mesInicioSelect.appendChild(option);
+            }
+        }
+
+        function formatoMoneda(numero) {
+            return `$${numero.toLocaleString('es-ES', { minimumFractionDigits: 0 })}`;
+        }
+
+        function formatearNumero(input) {
+            let valor = input.value;
+
+            // Remueve todo lo que no sea un número
+            valor = valor.replace(/\D/g, '');
+
+            // Limita el valor máximo a 999999999
+            if (Number(valor) > 999999999) {
+                valor = '999999999';
+            }
+
+            // Formatea el número con puntos de mil
+            valor = valor.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+            // Limita el valor máximo a 999999999
+            if (Number(valor) > 999999999) {
+                valor = '999999999';
+            }
+            // Actualiza el valor del input con el número formateado
+            input.value = valor;
+        }
+
+        function calcularAhorro() {
+            const cantidad = parseFloat(document.getElementById('cantidad').value.replace(/\./g, ''));
+            const mesInicioValue = document.getElementById('mesInicio').value;
+            const expectedProfitability = parseFloat(document.getElementById('fondoSeleccionado').value);
+            const [añoInicio, mesInicio] = mesInicioValue.split('-').map(Number);
+            const mesInicioDate = new Date(añoInicio, mesInicio - 1); // Crear fecha a partir del valor seleccionado
+            const mesFin = new Date(2026, 4, 31); // Mayo 2026
+
+            const mesesAhorro = Math.ceil((mesFin - mesInicioDate) / (1000 * 60 * 60 * 24 * 30.44)); // Ajustado para tener en cuenta los meses completos
+
+            const ahorroMensual = Math.ceil(cantidad / mesesAhorro);
+            const totalAhorrado = ahorroMensual * mesesAhorro;
+
+            const interesMensual = Math.pow(1 + expectedProfitability, 1 / 12) - 1;
+            let capitalMasIntereses = 0;
+
+            for (let i = 0; i < mesesAhorro; i++) {
+                capitalMasIntereses = (capitalMasIntereses + ahorroMensual) * (1 + interesMensual);
+            }
+            capitalMasIntereses = Math.ceil(capitalMasIntereses);
+
+            const ahorroMensualMenor = Math.ceil((cantidad * interesMensual) / (Math.pow(1 + interesMensual, mesesAhorro) - 1));
+            const totalAhorradoMenor = ahorroMensualMenor * mesesAhorro;
+            const capitalMasInteresesMenor = Math.ceil(ahorroMensualMenor * ((Math.pow(1 + interesMensual, mesesAhorro) - 1) / interesMensual));
+
+            const resultados = document.getElementById('resultados');
+            resultados.innerHTML = `
+                <h2>Sin Inversión</h2>
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th>Necesitas ahorrar al mes</th>
+                            <th>Total capital ahorrado</th>
+                            <th>Total meses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${formatoMoneda(ahorroMensual)}</td>
+                            <td>${formatoMoneda(totalAhorrado)}</td>
+                            <td>${mesesAhorro}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2>Opción 1 invirtiendo los mismos ${formatoMoneda(ahorroMensual)} al mes</h2>
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th>Necesitas ahorrar al mes</th>
+                            <th>Total capital ahorrado</th>
+                            <th>Total meses</th>
+                            <th>Capital más intereses</th>
+                            <th>Interés anual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${formatoMoneda(ahorroMensual)}</td>
+                            <td>${formatoMoneda(totalAhorrado)}</td>
+                            <td>${mesesAhorro}</td>
+                            <td>${formatoMoneda(capitalMasIntereses)}</td>
+                            <td>${(expectedProfitability * 100).toFixed(2)}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2>opción 2 inviertiendo menos al mes</h2>
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th>Necesitas ahorrar al mes</th>
+                            <th>Total capital ahorrado</th>
+                            <th>Total meses</th>
+                            <th>Capital más intereses</th>
+                            <th>Interés anual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${formatoMoneda(ahorroMensualMenor)}</td>
+                            <td>${formatoMoneda(totalAhorradoMenor)}</td>
+                            <td>${mesesAhorro}</td>
+                            <td>${formatoMoneda(capitalMasInteresesMenor)}</td>
+                            <td>${(expectedProfitability * 100).toFixed(2)}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>** Los valores mostrados son solo de referencia y están calculados en base a la rentabilidad anual del año anterior. Los resultados pueden variar según las condiciones del mercado y no garantizan rendimientos futuros.</p>
+            `;
+        }
+    </script>
+</body>
+</html>
